@@ -1,0 +1,4 @@
+/_build
+/deps
+.vscode/
+*.DS_Store

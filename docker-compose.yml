@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  tft_tracker:
+    build: .
+    tty: true
+    container_name: tft_tracker_bot
+    command: iex -S mix
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - .:/app
+    networks:
+      - tft_tracker_network
+
+  redis:
+    image: redis:latest
+    container_name: tft_tracker_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - tft_tracker_network
+
+networks:
+  tft_tracker_network:
+    driver: bridge
