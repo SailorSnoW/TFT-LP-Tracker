@@ -13,6 +13,17 @@
 - ⚡ **Powered by Riot API**: Utilizes the official Riot API to fetch game data.
 - 🚀 **Blazing Fast**: Built with Elixir, leveraging lightweight processes for high concurrency and performance.
 
+## 🚧 TODO
+
+- ➕ Add the ability to untrack a player.
+- 📈 Show player ranks, with LP gains and losses at the end of each game.
+- 🔄 Rework logging (debug, info, notice...) for better clarity and structure.
+- ⚙️ Optimize API requests to Riot to avoid rate limiting, crucial for scaling (currently not an issue for small communities).
+- 👫 Display game partner in Double Up mode.
+- And... REFACTOR CODEBASE A LOT (maybe)
+
+I welcome all feature requests through GitHub issues!
+
 ## 🚀 Getting Started
 
 ### Prerequisites
