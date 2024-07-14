@@ -10,7 +10,10 @@ defmodule Tft_tracker.RedisWorker do
   @impl true
   def init(_init_arg) do
     Logger.notice("Initializing Redis Worker with Redix... ")
-    {:ok, redix_pid} = Redix.start_link(name: :redix)
+    host = Application.get_env(:tft_tracker, :redis_host)
+    port = Application.get_env(:tft_tracker, :redis_port)
+
+    {:ok, redix_pid} = Redix.start_link(host: host, port: String.to_integer(port) , name: :redix)
     {:ok, %{redix_pid: redix_pid}}
   end
 
