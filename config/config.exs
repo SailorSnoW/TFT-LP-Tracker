@@ -6,5 +6,5 @@ config :nostrum,
   num_shards: :auto
 
 config :logger, :console,
-  format: "[$level] [$metadata] $message\n",
-  metadata: [:pid]
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:module, :summoner]
