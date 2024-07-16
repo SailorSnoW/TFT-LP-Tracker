@@ -1,4 +1,9 @@
 defmodule Tft_tracker.SummonerResultWorker do
+  @moduledoc """
+  This worker is invoked when the player isn't detected as in-game anymore and results of the game should then be fetched.
+  Each game waiting his results to be fetched have his unique worker.
+  """
+
   alias Tft_tracker.Embeds.ResultGame
   alias Tft_tracker.AlertsDispatcher
   alias Tft_tracker.Structs.GameResults
@@ -19,7 +24,6 @@ defmodule Tft_tracker.SummonerResultWorker do
 
     state = %{
       summoner_puuid: init_args[:summoner_puuid],
-      platform: init_args[:platform],
       game_id: init_args[:game_id],
       icon_id: init_args[:icon_id]
     }
@@ -31,7 +35,8 @@ defmodule Tft_tracker.SummonerResultWorker do
 
   @impl true
   def handle_info(:poll, state) do
-    case fetch_game_results(state[:game_id], state[:platform], state[:summoner_puuid], state[:icon_id]) do
+    platform = GenServer.call(Tft_tracker.RedisWorker, {:get_summoner_platform, state.summoner_puuid})
+    case fetch_game_results(state[:game_id], platform, state[:summoner_puuid], state[:icon_id]) do
       :not_found ->
         schedule_poll()
         {:noreply, state}
@@ -62,11 +67,11 @@ defmodule Tft_tracker.SummonerResultWorker do
 
         guild_ids = GenServer.call(Tft_tracker.RedisWorker, {:get_summoner_guilds, puuid})
         channel_ids = GenServer.call(Tft_tracker.RedisWorker, {:get_guild_ids_channels, guild_ids})
-        game_name = HttpClient.get_game_name_from_puuid(puuid)
+        game_tag = HttpClient.get_gametag_from_puuid(puuid)
         AlertsDispatcher.dispatch_embed(
           ResultGame.create_embed(
             String.to_atom(platform),
-            game_name,
+            game_tag.game_name,
             icon_id,
             data
           ),

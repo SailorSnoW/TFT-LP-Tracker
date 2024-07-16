@@ -23,6 +23,6 @@ defmodule Tft_tracker.Structs.LiveGameData do
     game_id: game_id(),
     in_game: in_game(),
     queue_id: queue_id(),
-    icon_id: icon_id() # TODO ADD QUEUE ID!!
+    icon_id: icon_id()
   }
 end

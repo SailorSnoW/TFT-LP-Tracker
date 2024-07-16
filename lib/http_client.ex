@@ -31,15 +31,15 @@ defmodule Tft_tracker.HttpClient do
     end
   end
 
-  @spec get_game_name_from_puuid(String.t()) :: String.t()
-  def get_game_name_from_puuid(puuid) do
+  @spec get_gametag_from_puuid(String.t()) :: %{game_name: String.t(), tag_line: String.t()} | :not_found
+  def get_gametag_from_puuid(puuid) do
     url = "/riot/account/v1/accounts/by-puuid/#{puuid}"
     # Default to europe as the nearest endpoint
     req = Req.new(base_url: Regions.endpoint(:europe), headers: %{x_riot_token: get_api_key()})
 
     case Req.get!(req, url: url) do
       %Response{status: status, body: body} when status in 200..299 ->
-        body["gameName"]
+        %{game_name: body["gameName"], tag_line: body["tagLine"]}
 
       %Response{status: status} when status == 404 ->
         :not_found

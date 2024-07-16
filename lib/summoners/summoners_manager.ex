@@ -9,13 +9,17 @@ defmodule Tft_tracker.SummonersManager do
   @impl true
   def init(_init_arg) do
     Logger.notice("Initializing Summoners Manager... ")
+    GenServer.cast(self(), :start_all_summoners)
+    {:ok, %{}}
+  end
 
+  @impl true
+  def handle_cast(:start_all_summoners, state) do
     children = Tft_tracker.SummonersDbFetcher.fetch_db_summoners()
     Enum.each(children, fn children_info ->
       start_summoner(children_info.puuid, children_info.child_spec)
     end)
-
-    {:ok, %{}}
+    {:noreply, state}
   end
 
   @impl true
@@ -29,8 +33,8 @@ defmodule Tft_tracker.SummonersManager do
   end
 
   @impl true
-  def handle_call({:register_summoner, puuid, platform, guild_id}, _from, state) do
-    result = register_summoner(puuid, platform, guild_id)
+  def handle_call({:register_summoner, puuid, platform, guild_id, game_name, tag_line}, _from, state) do
+    result = register_summoner(puuid, platform, guild_id, game_name, tag_line)
     {:reply, result, state}
   end
 
@@ -66,10 +70,10 @@ defmodule Tft_tracker.SummonersManager do
     end
   end
 
-  defp register_summoner(puuid, platform, guild_id) do
+  defp register_summoner(puuid, platform, guild_id, game_name, tag_line) do
     # DB writes
-    Logger.debug("Registering new summoner infos for #{puuid} on #{guild_id} to DB... ")
-    GenServer.call(Tft_tracker.RedisWorker, {:register_summoner, puuid, platform, guild_id})
+    Logger.info("Registering new summoner infos for #{puuid} on #{guild_id} to DB... ")
+    GenServer.call(Tft_tracker.RedisWorker, {:register_summoner, puuid, platform, guild_id, game_name, tag_line})
 
     Logger.debug("Starting summoner workers for #{puuid}... ")
     # Start summoner work

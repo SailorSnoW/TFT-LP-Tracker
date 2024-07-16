@@ -1,4 +1,9 @@
 defmodule Tft_tracker.SummonerLivePollerWorker do
+  @moduledoc """
+  This worker keep monitoring on the Riot Spectator API the state of the player.
+  If the player is detected in a game, game data are parsed then transfered to the general summoner worker.
+  """
+
   alias Tft_tracker.Structs.LiveGameData
   require Logger
   use GenServer
@@ -16,7 +21,6 @@ defmodule Tft_tracker.SummonerLivePollerWorker do
     state = %{
       worker_pid: init_args[:worker_pid],
       summoner_puuid: init_args[:summoner_puuid],
-      platform: init_args[:platform],
       icon_id: "0"
     }
 
@@ -52,8 +56,8 @@ defmodule Tft_tracker.SummonerLivePollerWorker do
 
   @spec poll_live_api(any()) :: map() | :not_in_game
   defp poll_live_api(state) do
-    Logger.debug("Polling Riot API live game data for #{state[:summoner_puuid]}... ")
-    Tft_tracker.HttpClient.get_current_game_infos(state[:summoner_puuid], String.to_atom(state[:platform]))
+    platform = GenServer.call(Tft_tracker.RedisWorker, {:get_summoner_platform, state.summoner_puuid})
+    Tft_tracker.HttpClient.get_current_game_infos(state[:summoner_puuid], String.to_atom(platform))
   end
 
   @spec parse_live_response(map(), String.t()) :: LiveGameData.t()
@@ -75,6 +79,4 @@ defmodule Tft_tracker.SummonerLivePollerWorker do
       participant -> participant["profileIconId"]
     end
   end
-
-
 end

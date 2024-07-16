@@ -1,4 +1,7 @@
 defmodule Tft_tracker.SummonersSupervisor do
+  @moduledoc """
+  This supervisor is in charge to supervise every unique summoner supervisor.
+  """
   require Logger
   use DynamicSupervisor
 

@@ -1,4 +1,7 @@
 defmodule Tft_tracker.SummonerVerifier do
+  @moduledoc """
+  Module that include some functions to ensure summoner data integrity
+  """
   require Logger
 
   alias Tft_tracker.Types.Platforms

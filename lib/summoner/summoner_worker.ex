@@ -1,4 +1,8 @@
 defmodule Tft_tracker.SummonerWorker do
+  @moduledoc """
+  This worker is the general manager of the summoner and is in charge to start other workers under the summoner supervisor.
+  """
+
   require Logger
   use GenServer
 
@@ -18,34 +22,45 @@ defmodule Tft_tracker.SummonerWorker do
     state = %{
       supervisor_pid: init_args[:supervisor_pid],
       summoner_puuid: init_args[:summoner_puuid],
-      platform: nil,
       live_game_data: %LiveGameData{}
     }
 
-    GenServer.cast(self(), :initialize_poller)
+    GenServer.cast(self(), :initialize_live_worker)
+    GenServer.cast(self(), :initialize_gametag_worker)
 
     {:ok, state}
   end
 
   @impl true
-  def handle_cast(:initialize_poller, state) do
-    Logger.debug("Retrieving cached summoner platform... ")
-    platform = GenServer.call(Tft_tracker.RedisWorker, {:get_summoner_platform, state.summoner_puuid})
-
-    new_state = %{state | platform: platform}
-
+  def handle_cast(:initialize_live_worker, state) do
     poller_child_specs = %{
       id: "summoner_poller_live_#{state.summoner_puuid}",
-      start: {Tft_tracker.SummonerLivePollerWorker, :start_link, [[worker_pid: self(), summoner_puuid: state.summoner_puuid, platform: platform]]}
+      start: {Tft_tracker.SummonerLivePollerWorker, :start_link, [[worker_pid: self(), summoner_puuid: state.summoner_puuid]]}
     }
     case DynamicSupervisor.start_child(state.supervisor_pid, poller_child_specs) do
       {:ok, _child} ->
-        Logger.info("Started live poller worker for summoner: #{state.summoner_puuid}")
+        Logger.debug("Started live poller worker for summoner: #{state.summoner_puuid}")
       {:error, reason} ->
         Logger.error("Failed to start live poller worker for summoner: #{state.summoner_puuid} with reason: #{inspect(reason)}")
     end
 
-    {:noreply, new_state}
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast(:initialize_gametag_worker, state) do
+    gametag_child_specs = %{
+      id: "summoner_gametag_#{state.summoner_puuid}",
+      start: {Tft_tracker.SummonerGametagWorker, :start_link, [[worker_pid: self(), summoner_puuid: state.summoner_puuid]]}
+    }
+    case DynamicSupervisor.start_child(state.supervisor_pid, gametag_child_specs) do
+      {:ok, _child} ->
+        Logger.debug("Started GameTag worker for summoner: #{state.summoner_puuid}")
+      {:error, reason} ->
+        Logger.error("Failed to start GameTag worker for summoner: #{state.summoner_puuid} with reason: #{inspect(reason)}")
+    end
+
+    {:noreply, state}
   end
 
   @impl true
@@ -62,7 +77,7 @@ defmodule Tft_tracker.SummonerWorker do
 
           poller_child_specs = %{
             id: "poller_results_#{state.summoner_puuid}_#{state.live_game_data.game_id}",
-            start: {Tft_tracker.SummonerResultWorker, :start_link, [[summoner_puuid: state[:summoner_puuid], platform: state[:platform], game_id: state.live_game_data.game_id, icon_id: state.live_game_data.icon_id]]},
+            start: {Tft_tracker.SummonerResultWorker, :start_link, [[summoner_puuid: state[:summoner_puuid], game_id: state.live_game_data.game_id, icon_id: state.live_game_data.icon_id]]},
             restart: :temporary
           }
           DynamicSupervisor.start_child(state.supervisor_pid, poller_child_specs)
@@ -70,15 +85,15 @@ defmodule Tft_tracker.SummonerWorker do
         Logger.debug("Summoner is now in a game: #{new_game_data.game_id}")
         guild_ids = GenServer.call(Tft_tracker.RedisWorker, {:get_summoner_guilds, state[:summoner_puuid]})
         channel_ids = GenServer.call(Tft_tracker.RedisWorker, {:get_guild_ids_channels, guild_ids})
-        game_name = HttpClient.get_game_name_from_puuid(state[:summoner_puuid])
-        embed = Embeds.InGame.create_embed(new_game_data.queue_id, game_name, new_game_data.icon_id)
+        game_tag = HttpClient.get_gametag_from_puuid(state[:summoner_puuid])
+        embed = Embeds.InGame.create_embed(new_game_data.queue_id, game_tag.game_name, new_game_data.icon_id)
         Tft_tracker.AlertsDispatcher.dispatch_embed(embed, channel_ids)
       else
         Logger.debug("Summoner is no longer in this game: #{state.live_game_data.game_id}")
 
         poller_child_specs = %{
           id: "poller_results_#{state.summoner_puuid}_#{state.live_game_data.game_id}",
-          start: {Tft_tracker.SummonerResultWorker, :start_link, [[summoner_puuid: state[:summoner_puuid], platform: state[:platform], game_id: state.live_game_data.game_id, icon_id: state.live_game_data.icon_id]]},
+          start: {Tft_tracker.SummonerResultWorker, :start_link, [[summoner_puuid: state[:summoner_puuid], game_id: state.live_game_data.game_id, icon_id: state.live_game_data.icon_id]]},
           restart: :temporary
         }
         DynamicSupervisor.start_child(state.supervisor_pid, poller_child_specs)

@@ -13,9 +13,12 @@ defmodule Tft_tracker.Commands.Track do
     |> Enum.map(&{&1.name, &1.value})
     |> Enum.into(%{})
 
-    case SummonerVerifier.verify_from_riot_name(options["game_name"], options["tag_line"], String.to_atom(options["platform"])) do
+    game_name = options["game_name"]
+    tag_line = options["tag_line"]
+
+    case SummonerVerifier.verify_from_riot_name(game_name, tag_line, String.to_atom(options["platform"])) do
       {:ok, puuid} ->
-        case GenServer.call(Tft_tracker.SummonersManager, {:register_summoner, puuid, options["platform"], interaction.guild_id}) do
+        case GenServer.call(Tft_tracker.SummonersManager, {:register_summoner, puuid, options["platform"], interaction.guild_id, game_name, tag_line}) do
           :ok ->
             [content: "✅ Successfuly started to track \"#{options["game_name"]}##{options["tag_line"]}\"."]
           {:error, reason} ->
