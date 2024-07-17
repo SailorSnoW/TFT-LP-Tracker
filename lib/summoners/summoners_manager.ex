@@ -33,8 +33,8 @@ defmodule Tft_tracker.SummonersManager do
   end
 
   @impl true
-  def handle_call({:register_summoner, puuid, platform, guild_id, game_name, tag_line}, _from, state) do
-    result = register_summoner(puuid, platform, guild_id, game_name, tag_line)
+  def handle_call({:register_summoner, puuid, platform, guild_id, game_name, tag_line, summoner_id}, _from, state) do
+    result = register_summoner(puuid, platform, guild_id, game_name, tag_line, summoner_id)
     {:reply, result, state}
   end
 
@@ -70,10 +70,10 @@ defmodule Tft_tracker.SummonersManager do
     end
   end
 
-  defp register_summoner(puuid, platform, guild_id, game_name, tag_line) do
+  defp register_summoner(puuid, platform, guild_id, game_name, tag_line, summoner_id) do
     # DB writes
     Logger.info("Registering new summoner infos for #{puuid} on #{guild_id} to DB... ")
-    GenServer.call(Tft_tracker.RedisWorker, {:register_summoner, puuid, platform, guild_id, game_name, tag_line})
+    GenServer.call(Tft_tracker.RedisWorker, {:register_summoner, puuid, platform, guild_id, game_name, tag_line, summoner_id})
 
     Logger.debug("Starting summoner workers for #{puuid}... ")
     # Start summoner work

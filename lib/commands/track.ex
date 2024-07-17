@@ -17,8 +17,8 @@ defmodule Tft_tracker.Commands.Track do
     tag_line = options["tag_line"]
 
     case SummonerVerifier.verify_from_riot_name(game_name, tag_line, String.to_atom(options["platform"])) do
-      {:ok, puuid} ->
-        case GenServer.call(Tft_tracker.SummonersManager, {:register_summoner, puuid, options["platform"], interaction.guild_id, game_name, tag_line}) do
+      {:ok, puuid, summoner_id} ->
+        case GenServer.call(Tft_tracker.SummonersManager, {:register_summoner, puuid, options["platform"], interaction.guild_id, game_name, tag_line, summoner_id}) do
           :ok ->
             [content: "✅ Successfuly started to track \"#{options["game_name"]}##{options["tag_line"]}\"."]
           {:error, reason} ->

@@ -38,7 +38,7 @@ defmodule Tft_tracker.SummonerLivePollerWorker do
         send(state.worker_pid, {:live_response, %LiveGameData{}})
       body ->
         data = parse_live_response(body, state[:summoner_puuid])
-        # Ensure we deal with a compatible queue mode
+        # Ensure we deal with a compatible queue mode else we just ignore it
         if Queues.is_ranked_queue?(data.queue_id) do
           Logger.debug("Sending new live game data to supervisor #{state[:summoner_puuid]}")
           send(state.worker_pid, {:live_response, data})

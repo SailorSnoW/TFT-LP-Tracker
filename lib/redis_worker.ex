@@ -22,8 +22,8 @@ defmodule Tft_tracker.RedisWorker do
   end
 
   @impl true
-  def handle_call({:register_summoner, puuid, platform, guild_id, game_name, tag_line}, _from, state) do
-    result = register_summoner(state.redix_pid, puuid, platform, guild_id, game_name, tag_line)
+  def handle_call({:register_summoner, puuid, platform, guild_id, game_name, tag_line, summoner_id}, _from, state) do
+    result = register_summoner(state.redix_pid, puuid, platform, guild_id, game_name, tag_line, summoner_id)
     {:reply, result, state}
   end
 
@@ -93,8 +93,20 @@ defmodule Tft_tracker.RedisWorker do
     {:reply, result, state}
   end
 
-  @spec register_summoner(pid(), String.t(), Platforms.t(), String.t(), String.t(), String.t()) :: :ok | :error
-  defp register_summoner(redix_pid, puuid, platform, guild_id, game_name, tag_line) do
+  @impl true
+  def handle_call({:set_summoner_id, puuid, summoner_id}, _from, state) do
+    result = set_summoner_id(state.redix_pid, puuid, summoner_id)
+    {:reply, result, state}
+  end
+
+  @impl true
+  def handle_call({:get_summoner_id, puuid}, _from, state) do
+    result = get_summoner_id(state.redix_pid, puuid)
+    {:reply, result, state}
+  end
+
+  @spec register_summoner(pid(), String.t(), Platforms.t(), String.t(), String.t(), String.t(), String.t()) :: :ok | :error
+  defp register_summoner(redix_pid, puuid, platform, guild_id, game_name, tag_line, summoner_id) do
     Logger.debug("Registering summoner #{puuid} with associated guild_id #{guild_id} and platform #{platform} ...")
 
     case Redix.pipeline(redix_pid, [
@@ -102,6 +114,7 @@ defmodule Tft_tracker.RedisWorker do
       ["SET", "summoner:#{puuid}:platform", "#{platform}"],
       ["SET", "summoner:#{puuid}:name", game_name],
       ["SET", "summoner:#{puuid}:tag", tag_line],
+      ["SET", "summoner:#{puuid}:id", summoner_id],
       ["SADD", "summoners", "#{puuid}"],
       ]) do
       {:ok, _} ->
@@ -206,5 +219,17 @@ defmodule Tft_tracker.RedisWorker do
   defp get_summoner_icon_id(redix_pid, puuid) do
     Logger.debug("Fetching icon_id for summoner #{puuid}...")
     Redix.command!(redix_pid, ["GET", "summoner:#{puuid}:icon_id"])
+  end
+
+  @spec set_summoner_id(pid(), String.t(), String.t()) :: Redix.Protocol.redis_value()
+  defp set_summoner_id(redix_pid, puuid, summoner_id) do
+    Logger.debug("Writing summoner_id #{summoner_id} for summoner #{puuid}...")
+    Redix.command!(redix_pid, ["SET", "summoner:#{puuid}:id", summoner_id])
+  end
+
+  @spec get_summoner_id(pid(), String.t()) :: String.t()
+  defp get_summoner_id(redix_pid, puuid) do
+    Logger.debug("Fetching summoner_id for summoner #{puuid}...")
+    Redix.command!(redix_pid, ["GET", "summoner:#{puuid}:id"])
   end
 end
