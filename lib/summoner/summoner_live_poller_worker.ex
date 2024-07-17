@@ -4,6 +4,7 @@ defmodule Tft_tracker.SummonerLivePollerWorker do
   If the player is detected in a game, game data are parsed then transfered to the general summoner worker.
   """
 
+  alias Tft_tracker.Types.Queues
   alias Tft_tracker.Structs.LiveGameData
   require Logger
   use GenServer
@@ -37,8 +38,11 @@ defmodule Tft_tracker.SummonerLivePollerWorker do
         send(state.worker_pid, {:live_response, %LiveGameData{}})
       body ->
         data = parse_live_response(body, state[:summoner_puuid])
-        Logger.debug("Sending new live game data to supervisor #{state[:summoner_puuid]}")
-        send(state.worker_pid, {:live_response, data})
+        # Ensure we deal with a compatible queue mode
+        if Queues.is_ranked_queue?(data.queue_id) do
+          Logger.debug("Sending new live game data to supervisor #{state[:summoner_puuid]}")
+          send(state.worker_pid, {:live_response, data})
+        end
     end
 
     schedule_poll()
