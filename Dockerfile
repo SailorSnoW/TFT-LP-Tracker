@@ -7,9 +7,9 @@ WORKDIR /app
 
 COPY mix.exs mix.lock ./
 
-RUN mix deps.get
-
 COPY . .
+
+RUN mix deps.get
 
 RUN mix compile
 
